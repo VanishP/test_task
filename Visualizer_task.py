@@ -7,6 +7,7 @@ Creates plots of value and average price
 import sys
 import datetime
 from typing import Dict, List, io, ClassVar
+from math import pi
 import argparse
 import json
 import bokeh.layouts as layouts
@@ -101,9 +102,11 @@ def manage_visualizer(cl_arg: ClassVar):
     Creates files with plots and data in selected mode(create, append) and
     records data and plots in dir.
     """
-    date_index = {1: "seconds", 2: "minutes",
-                          3: "hours", 4: "days",
-                          5: "weeks"}[cl_arg.interval[0]]
+    time_delta = {1: datetime.timedelta(seconds=cl_arg.interval[1]),
+             2: datetime.timedelta(minutes=cl_arg.interval[1]),
+             3: datetime.timedelta(hours=cl_arg.interval[1]),
+             4: datetime.timedelta(days=cl_arg.interval[1]),
+             5: datetime.timedelta(weeks=cl_arg.interval[1])}
     print("in manage_visualizer")
     if cl_arg.mode == "create":
         data_frame = pd.DataFrame(parse_file(cl_arg.file))
@@ -113,8 +116,7 @@ def manage_visualizer(cl_arg: ClassVar):
                                                data_frame)
         else:
             data_for_plots = data_frame
-        plots = create_plots(data_for_plots, cl_arg.interval,
-                             date_index)
+        plots = create_plots(data_for_plots, time_delta[cl_arg.interval[0]])
         record_in_dir(cl_arg.file, cl_arg.output, plots)
     else:
         data = cl_arg.file.read()[:-1] + ", " + cl_arg.new_file.read()[1:]
@@ -131,33 +133,28 @@ def manage_visualizer(cl_arg: ClassVar):
                                                    data_frame, data_file)
         else:
             data_for_plots = data_frame
-        plots = create_plots(data_for_plots, cl_arg.interval,
-                             date_index)
+        plots = create_plots(data_for_plots, time_delta[cl_arg.interval[0]])
         record_in_dir(out_data, cl_arg.output, plots)
         data_file.unlink()
 
 
 def choise_date_in_period(period: List[str],
-                          data_frame: ClassVar, data_file: ClassVar=None) -> ClassVar:
-    """ Filter data in period"""
+                          data_frame: ClassVar,
+                          data_file: ClassVar=None) -> ClassVar:
+    """ Filter data by period"""
     print("in choise_date_in_period")
     fmt = "%Y-%m-%d %H:%M:%S.%f"
     p0 = datetime.datetime.strptime(period[0] + " " + period[1],fmt)
     p1 = datetime.datetime.strptime(period[2] + " " + period[3],fmt)
     i = 0
-    data = data_frame.values[:, 0]
     length = data_frame.shape[0]-1
     if p0 > data_frame.values[length, 0] or p1 < data_frame.values[0, 0]:
         print("Error: this period doesn't contain any values")
         data_file.unlink()
         sys.exit(1)
-    while data[i] < p0 and i != length:
-        i += 1
-    j = 0
-    while data[j] <= p1 and j != length:
-        j += 1
-    period_data = data_frame[i:j]
-    return period_data
+    data_frame = data_frame.loc[data_frame["date"] >= p0]
+    data_frame = data_frame.loc[data_frame["date"] <= p1]
+    return data_frame
 
 def record_in_dir(data_file: io, output: str, plots: ClassVar):
     """ records in dir plots and data"""
@@ -173,19 +170,24 @@ def record_in_dir(data_file: io, output: str, plots: ClassVar):
     shutil.copyfile(data_file.name, directory/(output + "_data.json"))
     data_file.close()
 
-# def create_plots(data_frame: ClassVar, interval:int, date_index:str) -> ClassVar:                  # what about interval mthfck!
-#     """ Create plots of volume and average price """
-#     print("in create_plots")
-#     plot1 = figure(title=" Volume plot", x_axis_label="time stamp", y_axis_label = "volume")
-#     plot1.line(data_frame["time_stamp"], data_frame["volume"])        ########### add intervals
-#     plot1.yaxis.major_label_orientation = "vertical"
-#     plot2 = figure(title=" Average price plot", x_axis_label="time stamp", y_axis_label = "average price")
-#     plot2.line(data_frame["time_stamp"], data_frame["average_price"])    ############ add intervals
-#     plot2.yaxis.major_label_orientation = "vertical"
-#     return layouts.column([plot1, plot2])
+def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
+    """ Create plots of volume and average price """
+    print("in create_plots")
+
+    plot1 = figure(title=" Volume plot", x_axis_label="time stamp",
+                   y_axis_label = "volume",  x_axis_type="datetime")
+    plot1.line(data_frame["date"], data_frame["volume"])
+    plot1.yaxis.major_label_orientation = "vertical"
+    plot2 = figure(title=" Average price plot", x_axis_label="time stamp",
+                   y_axis_label = "average price", x_axis_type="datetime",
+                   x_minor_ticks=3)
+    plot2.xaxis[0].formatter.days = '%d/%m/%Y'
+    plot2.xaxis.major_label_orientation = pi / 3
+    plot2.line(data_frame["date"], data_frame["average_price"])
+    plot2.yaxis.major_label_orientation = "vertical"
+    return layouts.column([plot1, plot2])
 
 
 
 cl_arg = parser_cl_args()
-print(cl_arg)
 manage_visualizer(cl_arg)
