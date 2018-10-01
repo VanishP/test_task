@@ -102,14 +102,17 @@ def parser_cl_args() -> ClassVar:
         print(err.msg)
         sys.exit(1)
     fmt = "%Y-%m-%d %H:%M:%S.%f"
-    p1 = cl_arg.period[0] + " " + cl_arg.period[1]
-    p2 = cl_arg.period[2] + " " + cl_arg.period[3]
     try:
+        p1 = cl_arg.period[0] + " " + cl_arg.period[1]
+        p2 = cl_arg.period[2] + " " + cl_arg.period[3]
         if  (datetime.datetime.strptime(p1,fmt) >
              datetime.datetime.strptime(p2,fmt)):
             raise MyError("Error: incorrect period")
     except MyError as err:
         print(err.msg)
+        cl_arg.period = None
+    except TypeError:
+        print("Error: incorrect period")
         cl_arg.period = None
     return cl_arg
 
@@ -127,6 +130,7 @@ def manage_visualizer(cl_arg: ClassVar):
              datetime.timedelta(weeks=cl_arg.interval[1])
              ]
     print("in manage_visualizer")
+
 
     if cl_arg.mode == "create":
         data_frame = pd.DataFrame(parse_file(cl_arg.file))
@@ -213,17 +217,27 @@ def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     ticks_date = list(map(lambda x: x.strftime("%d %b %Y %T"), ticks_date))
     ticks_dict = dict(zip(ticks, ticks_date))
 
+    # Create Volume plot
+    def sum_volume(volume: ClassVar):
+        for i in range(volume.size)[1:]:
+            volume[i] += volume[i - 1]
+        return volume
+
+    volume = data_frame["volume"].values
+
+
     plot1 = figure(title=" Volume plot", x_axis_label="time stamp",
                    y_axis_label = "volume", plot_width=1000)
-    plot1.line(data_frame["time_stamp"], data_frame["volume"])
+    plot1.line(data_frame["time_stamp"].values, sum_volume(volume))
     plot1.yaxis.major_label_orientation = "vertical"
     plot1.xaxis.ticker = FixedTicker(ticks=ticks)
     plot1.xaxis.major_label_overrides = ticks_dict
     plot1.xaxis.major_label_orientation = pi / 3
 
+    # Create Average Price plot
     plot2 = figure(title=" Average price plot", x_axis_label="time stamp",
                    y_axis_label = "average price", plot_width=1000)
-    plot2.line(data_frame["time_stamp"], data_frame["average_price"])
+    plot2.line(data_frame["time_stamp"].values, data_frame["average_price"].values)
     plot2.yaxis.major_label_orientation = "vertical"
     plot2.xaxis.ticker = FixedTicker(ticks=ticks)
     plot2.xaxis.major_label_overrides = ticks_dict
