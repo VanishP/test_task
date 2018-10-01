@@ -112,7 +112,7 @@ def parser_cl_args() -> ClassVar:
         print(err.msg)
         cl_arg.period = None
     except TypeError:
-        print("Error: incorrect period")
+        print("Empty period or incorrect period")
         cl_arg.period = None
     return cl_arg
 
