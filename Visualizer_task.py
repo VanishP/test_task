@@ -17,15 +17,16 @@ import pathlib
 
 import bokeh.layouts as layouts
 from bokeh.io import output_file, show
+from bokeh.models import FixedTicker
+from bokeh.models.formatters import FuncTickFormatter
 from bokeh.plotting import figure
 import pandas as pd
 
 
 class MyError(Exception):
-    def __init__(self,value):
-        self.msg = value
-    def __str__(self):
-        return self.msg
+    def __init__(self,error_text:str="error"):
+        self.msg = error_text
+
 
 
 
@@ -60,18 +61,19 @@ def parser_cl_args() -> ClassVar:
     pars.add_argument("mode", type=str,
                       help="mode of create plots: create, append")
     pars.add_argument("file", type=argparse.FileType(),
-                      help="name of old .json data file in append mode")
+                      help="""name of old .json data file in append mode
+                            and .json data file in create mode""")
     pars.add_argument("--new_file", type=argparse.FileType(),
                       help="""name of new .json data file in append mode
                       and .json data file in create mode""")
     pars.add_argument("--interval", nargs=2, type=int, required=True,
                       help="""interval for ticks on axis of 2 arguments:
                              first argument:
-                             1-sec,
-                             2-min,
-                             3-hour,
-                             4-day,
-                             5-week,
+                             0-sec,
+                             1-min,
+                             2-hour,
+                             3-day,
+                             4-week,
                              second argument - length of interval""")
     pars.add_argument("--output", type=str, required=True,
                       help="name of output file")
@@ -117,13 +119,13 @@ def manage_visualizer(cl_arg: ClassVar):
     Creates files with plots and data in selected mode(create, append) and
     records data and plots in dir.
     """
-    time_delta = {
-             1: datetime.timedelta(seconds=cl_arg.interval[1]),
-             2: datetime.timedelta(minutes=cl_arg.interval[1]),
-             3: datetime.timedelta(hours=cl_arg.interval[1]),
-             4: datetime.timedelta(days=cl_arg.interval[1]),
-             5: datetime.timedelta(weeks=cl_arg.interval[1])
-             }
+    time_delta = [
+             datetime.timedelta(seconds=cl_arg.interval[1]),
+             datetime.timedelta(minutes=cl_arg.interval[1]),
+             datetime.timedelta(hours=cl_arg.interval[1]),
+             datetime.timedelta(days=cl_arg.interval[1]),
+             datetime.timedelta(weeks=cl_arg.interval[1])
+             ]
     print("in manage_visualizer")
 
     if cl_arg.mode == "create":
@@ -196,21 +198,36 @@ def record_in_dir(data_file: io, output: str, plots: ClassVar):
 def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     """ Create plots of volume and average price """
     print("in create_plots")
+    print(time_delta)
+    first_date = data_frame.values[0,0]
+    last_date = data_frame.values[data_frame.shape[0] - 1, 0]
+    date_tick = first_date
+    ticks_date = [first_date - time_delta, first_date]
+    print("f d=", first_date)
+    print("l d=", last_date)
+    while date_tick <= last_date:
+        date_tick += time_delta
+        ticks_date.append(date_tick)
+
+    ticks = list(map(lambda x: x.timestamp(), ticks_date))
+    ticks_date = list(map(lambda x: x.strftime("%d %b %Y %T"), ticks_date))
+    ticks_dict = dict(zip(ticks, ticks_date))
 
     plot1 = figure(title=" Volume plot", x_axis_label="time stamp",
-                   y_axis_label = "volume",  x_axis_type="datetime",
-                   plot_width=1000)
-    plot1.line(data_frame["date"], data_frame["volume"])
+                   y_axis_label = "volume", plot_width=1000)
+    plot1.line(data_frame["time_stamp"], data_frame["volume"])
     plot1.yaxis.major_label_orientation = "vertical"
-    plot1.xaxis[0].formatter.days = '%d\n%b\n%Y'
+    plot1.xaxis.ticker = FixedTicker(ticks=ticks)
+    plot1.xaxis.major_label_overrides = ticks_dict
     plot1.xaxis.major_label_orientation = pi / 3
+
     plot2 = figure(title=" Average price plot", x_axis_label="time stamp",
-                   y_axis_label = "average price", x_axis_type="datetime",
-                   x_minor_ticks=3,  plot_width=1000)
-    plot2.xaxis[0].formatter.days = '%d/%b/%Y'
-    plot2.xaxis.major_label_orientation = pi / 3
-    plot2.line(data_frame["date"], data_frame["average_price"])
+                   y_axis_label = "average price", plot_width=1000)
+    plot2.line(data_frame["time_stamp"], data_frame["average_price"])
     plot2.yaxis.major_label_orientation = "vertical"
+    plot2.xaxis.ticker = FixedTicker(ticks=ticks)
+    plot2.xaxis.major_label_overrides = ticks_dict
+    plot2.xaxis.major_label_orientation = pi / 3
     return layouts.column([plot1, plot2])
 
 
