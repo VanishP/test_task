@@ -18,7 +18,6 @@ import pathlib
 import bokeh.layouts as layouts
 from bokeh.io import output_file, show
 from bokeh.models import FixedTicker
-from bokeh.models.formatters import FuncTickFormatter
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -35,8 +34,6 @@ def parse_file(json_file: io) -> Dict[str, List]:
     Parses .json file into argument dictionaries,
     return dict with lists of arguments
     """
-    print("in parse_file")
-
     # Define dict of argument lists for json.load
     def data_to_lists(list_of_dict: List[Dict]) -> Dict[str, List]:
         ts = list(map(lambda obj: float(obj["ts"]), list_of_dict))
@@ -56,7 +53,6 @@ def parse_file(json_file: io) -> Dict[str, List]:
 
 def parser_cl_args() -> ClassVar:
     """ Parses arguments from command line, return required arguments"""
-    print("in parser_cl_args")
     pars = argparse.ArgumentParser()
     pars.add_argument("mode", type=str,
                       help="mode of create plots: create, append")
@@ -96,7 +92,7 @@ def parser_cl_args() -> ClassVar:
         print(err.msg)
         sys.exit(1)
     try:
-        if cl_arg.interval[0] not in [1, 2, 3, 4, 5]:
+        if cl_arg.interval[0] not in [0, 1, 2, 3, 4]:
             raise MyError("Error: incorrect interval time index")
     except MyError as err:
         print(err.msg)
@@ -129,7 +125,6 @@ def manage_visualizer(cl_arg: ClassVar):
              datetime.timedelta(days=cl_arg.interval[1]),
              datetime.timedelta(weeks=cl_arg.interval[1])
              ]
-    print("in manage_visualizer")
 
 
     if cl_arg.mode == "create":
@@ -172,7 +167,6 @@ def choise_date_in_period(period: List[str],
                           data_frame: ClassVar,
                           data_file: ClassVar=None) -> ClassVar:
     """ Filter data by period"""
-    print("in choise_date_in_period")
     fmt = "%Y-%m-%d %H:%M:%S.%f"
     p0 = datetime.datetime.strptime(period[0] + " " + period[1],fmt)
     p1 = datetime.datetime.strptime(period[2] + " " + period[3],fmt)
@@ -190,7 +184,6 @@ def choise_date_in_period(period: List[str],
 
 def record_in_dir(data_file: io, output: str, plots: ClassVar):
     """ Records in dir plots and data"""
-    print("in record_in_dir")
     directory = pathlib.Path.cwd()/(output + "_dir")
     directory.mkdir(parents=True)
     output_file(directory/(output + ".html"))
@@ -201,14 +194,10 @@ def record_in_dir(data_file: io, output: str, plots: ClassVar):
 
 def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     """ Create plots of volume and average price """
-    print("in create_plots")
-    print(time_delta)
     first_date = data_frame.values[0,0]
     last_date = data_frame.values[data_frame.shape[0] - 1, 0]
     date_tick = first_date
     ticks_date = [first_date - time_delta, first_date]
-    print("f d=", first_date)
-    print("l d=", last_date)
     while date_tick <= last_date:
         date_tick += time_delta
         ticks_date.append(date_tick)
