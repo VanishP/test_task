@@ -75,7 +75,7 @@ def parser_cl_args() -> ClassVar:
                       help="name of output file")
     pars.add_argument("--period", nargs=4, type=str,
                       help="""time period for build plots in
-                           ISO 8601 format (YYYY-MM-DDTHH:MM:SS.mmmmmm""")
+                           ISO 8601 format (YYYY-MM-DDT HH:MM:SS.mmmmmm""")
 
 
     cl_arg =  pars.parse_args()
@@ -125,7 +125,7 @@ def manage_visualizer(cl_arg: ClassVar):
              datetime.timedelta(days=cl_arg.interval[1]),
              datetime.timedelta(weeks=cl_arg.interval[1])
              ]
-
+    print(cl_arg.mode)
 
     if cl_arg.mode == "create":
         data_frame = pd.DataFrame(parse_file(cl_arg.file))
@@ -176,7 +176,8 @@ def choise_date_in_period(period: List[str],
            raise MyError("Error: this period doesn't contain any values")
     except MyError as err:
         print(err.msg)
-        data_file.unlink()
+        if data_file is not None:
+            data_file.unlink()
         sys.exit(1)
     data_frame = data_frame.loc[data_frame["date"] >= p0]
     data_frame = data_frame.loc[data_frame["date"] <= p1]
@@ -207,7 +208,7 @@ def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     ticks_dict = dict(zip(ticks, ticks_date))
 
     # Create Volume plot
-    def sum_volume(volume: ClassVar):
+    def sum_volume(volume: ClassVar) -> ClassVar:
         for i in range(volume.size)[1:]:
             volume[i] += volume[i - 1]
         return volume
