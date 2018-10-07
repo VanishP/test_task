@@ -193,9 +193,46 @@ def record_in_dir(data_file: io, output: str, plots: ClassVar):
     data_file.close()
 
 
+
 def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     """ Create plots of volume and average price """
-    first_date = data_frame.values[0,0]
+    ticks_dict = define_ticks(data_frame, time_delta)
+
+    # Create Volume plot
+    volume = sum_volume(data_frame["volume"].values)
+    plot1 = plotting(data_frame["time_stamp"].values,
+                     volume, ticks_dict, "Volume")
+
+    # Create Average Price plot
+    plot2 = plotting(data_frame["time_stamp"].values,
+                     data_frame["average_price"].values,
+                     ticks_dict, "Average price")
+    return layouts.column([plot1, plot2])
+
+def plotting(x: ClassVar, y: ClassVar,
+             ticks_dict: Dict, name: str="f(x)") -> ClassVar:
+    """ Plotting the graph"""
+    plot = figure(title=name + " plot", x_axis_label="time stamp",
+                   y_axis_label=name, plot_width=1000)
+    plot.line(x, y)
+    plot.yaxis.major_label_orientation = "vertical"
+    plot.xaxis.ticker = FixedTicker(ticks=list(ticks_dict.keys()))
+    plot.xaxis.major_label_overrides = ticks_dict
+    plot.xaxis.major_label_orientation = pi / 3
+    return plot
+
+def sum_volume(volume: ClassVar) -> ClassVar:
+    """ Calculate  volume values since first date"""
+    for i in range(volume.size)[1:]:
+        volume[i] += volume[i - 1]
+    return volume
+
+
+
+def define_ticks(data_frame: ClassVar,
+                 time_delta: ClassVar) -> Dict[int, str]:
+    """ Define ticks on xaxis according with interval argument"""
+    first_date = data_frame.values[0, 0]
     last_date = data_frame.values[data_frame.shape[0] - 1, 0]
     date_tick = first_date
     ticks_date = [first_date - time_delta, first_date]
@@ -206,34 +243,7 @@ def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     ticks = list(map(lambda x: x.timestamp(), ticks_date))
     ticks_date = list(map(lambda x: x.strftime("%d %b %Y %T"), ticks_date))
     ticks_dict = dict(zip(ticks, ticks_date))
-
-    # Create Volume plot
-    def sum_volume(volume: ClassVar) -> ClassVar:
-        for i in range(volume.size)[1:]:
-            volume[i] += volume[i - 1]
-        return volume
-
-    volume = data_frame["volume"].values
-
-
-    plot1 = figure(title=" Volume plot", x_axis_label="time stamp",
-                   y_axis_label = "volume", plot_width=1000)
-    plot1.line(data_frame["time_stamp"].values, sum_volume(volume))
-    plot1.yaxis.major_label_orientation = "vertical"
-    plot1.xaxis.ticker = FixedTicker(ticks=ticks)
-    plot1.xaxis.major_label_overrides = ticks_dict
-    plot1.xaxis.major_label_orientation = pi / 3
-
-    # Create Average Price plot
-    plot2 = figure(title=" Average price plot", x_axis_label="time stamp",
-                   y_axis_label = "average price", plot_width=1000)
-    plot2.line(data_frame["time_stamp"].values, data_frame["average_price"].values)
-    plot2.yaxis.major_label_orientation = "vertical"
-    plot2.xaxis.ticker = FixedTicker(ticks=ticks)
-    plot2.xaxis.major_label_overrides = ticks_dict
-    plot2.xaxis.major_label_orientation = pi / 3
-    return layouts.column([plot1, plot2])
-
+    return ticks_dict
 
 if __name__ == '__main__':
     cl_arg = parser_cl_args()

@@ -25,19 +25,19 @@ if __name__ == "__main__":
           "first argument:"
 		  "0-sec, 1-min, 2-hour, 3-day, 4-week, second argument: length of interval.")
 
-	        
+
     print("Plots and data saves in directory "
 	      "with the name specified in output argument.")
     print("Respectively, the script calls on the command line:")
     for interval in intervals:
         print(" ".join([process, mode[0], file1, interval,
                        output + "create" + interval[11]]))
-			  
+
     for interval in intervals:
         subprocess.call(" ".join([process, mode[0], file1, interval,
                                   output + "create" + interval[11]]),
                         shell=True)
-	
+
     print("\n\n**********")
     print("Now call script with period argument:")
     print(" ".join([process, mode[0], file1, intervals[3],
@@ -45,32 +45,10 @@ if __name__ == "__main__":
     subprocess.call(" ".join([process, mode[0], file1, intervals[3],
                               output + "create_period" + intervals[3][11],
                               period]), shell=True)
-					
+
     print("\n\n**********")
     print("And, finally, call script in append mode with no period argument:")
     print(" ".join([process, mode[1], file1, file2, intervals[3][11],
                     output + "append" + intervals[3][11]]))
     subprocess.call(" ".join([process, mode[1], file1, file2, intervals[3],
 	                        output + "append" + intervals[3][11]]), shell=True)
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
