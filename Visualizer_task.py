@@ -20,9 +20,10 @@ from bokeh.io import output_file, show
 from bokeh.models import FixedTicker
 from bokeh.plotting import figure
 import pandas as pd
+import numpy as np
 
 
-class MyError(Exception):
+class UserError(Exception):
     def __init__(self,error_text:str="error"):
         self.msg = error_text
 
@@ -34,83 +35,129 @@ def parse_file(json_file: io) -> Dict[str, List]:
     Parses .json file into argument dictionaries,
     return dict with lists of arguments
     """
-    # Define dict of argument lists for json.load
-    def data_to_lists(list_of_dict: List[Dict]) -> Dict[str, List]:
-        ts = list(map(lambda obj: float(obj["ts"]), list_of_dict))
-        date = list(map(lambda obj:
-                        datetime.datetime.fromtimestamp(float(obj["ts"])),
-                        list_of_dict))
-        volume = list(map(lambda obj: float(obj["volume"]), list_of_dict))
-        av_price = list(map(lambda obj: float(obj["price"]), list_of_dict))
-        return dict(zip(["date", "time_stamp", "volume", "average_price"],
-                        [date, ts, volume, av_price]))
-
     args = json.load(json_file)
     json_file.close()
-    return data_to_lists(args)
+    return create_data_dict(args)
+
+def create_data_dict(json_data: List[Dict]) -> ClassVar:
+    """
+    Creates dictionary with data lists: timestamps, date, volume and price
+    """
+    json_data = np.array(list(map(lambda obj:
+                    [[datetime.datetime.fromtimestamp(float(obj["ts"])),
+                      float(obj["ts"]),
+                      float(obj["volume"]),
+                      float(obj["price"])]],json_data))).T
+    data_frame = pd.DataFrame(dict(zip(["date", "time_stamp", "volume",
+                                        "average_price"],
+                                        [json_data[0].tolist()[0],
+                                         json_data[1].tolist()[0],
+                                         json_data[2].tolist()[0],
+                                         json_data[3].tolist()[0]])))
+    return data_frame
 
 
+def parse_cl_args() -> ClassVar:
+    """
+    Parses arguments from command line, return required arguments
+    """
+    pars = add_arguments()
+    cl_arg =  pars.parse_args()
+    if check_cl_args(cl_arg):
+        cl_arg.period = None
+    return cl_arg
 
-def parser_cl_args() -> ClassVar:
-    """ Parses arguments from command line, return required arguments"""
+def add_arguments():
+    """
+    Adds command line arguments
+    """
     pars = argparse.ArgumentParser()
     pars.add_argument("mode", type=str,
                       help="mode of create plots: create, append")
     pars.add_argument("file", type=argparse.FileType(),
                       help="""name of old .json data file in append mode
-                            and .json data file in create mode""")
+                                and .json data file in create mode""")
     pars.add_argument("--new_file", type=argparse.FileType(),
                       help="""name of new .json data file in append mode
-                      and .json data file in create mode""")
+                          and .json data file in create mode""")
     pars.add_argument("--interval", nargs=2, type=int, required=True,
                       help="""interval for ticks on axis of 2 arguments:
-                             first argument:
-                             0-sec,
-                             1-min,
-                             2-hour,
-                             3-day,
-                             4-week,
-                             second argument - length of interval""")
+                                 first argument:
+                                 0-sec,
+                                 1-min,
+                                 2-hour,
+                                 3-day,
+                                 4-week,
+                                 second argument - length of interval""")
     pars.add_argument("--output", type=str, required=True,
                       help="name of output file")
     pars.add_argument("--period", nargs=4, type=str,
                       help="""time period for build plots in
-                           ISO 8601 format (YYYY-MM-DDT HH:MM:SS.mmmmmm""")
+                               ISO 8601 format (YYYY-MM-DDT HH:MM:SS.mmmmmm""")
+    return pars
 
+def check_cl_args(cl_arg:ClassVar) -> bool:
+    """
+    Checks command line arguments
+    """
+    check_excess_create_arg(cl_arg)
+    check_excess_create_arg(cl_arg)
+    check_interval_arg(cl_arg)
+    if cl_arg is not None:
+        return check_period_argument(cl_arg)
+    return True
 
-    cl_arg =  pars.parse_args()
+def check_excess_create_arg(cl_arg:ClassVar):
+    """
+    Checks existence excess command line argument(--new_file)
+    """
     try:
         if cl_arg.mode == "create" and cl_arg.new_file  is not None:
-            raise MyError("Error: arg new_file isn't required in this mode ")
-    except MyError as err:
+            raise UserError("Error: arg new_file isn't required in this mode ")
+    except UserError as err:
         print(err.msg)
         sys.exit(1)
+
+def check_append_arg(cl_arg:ClassVar):
+    """
+    Checks existence append command line argument(--new_file)
+    """
     try:
         if cl_arg.mode == "append" and cl_arg.new_file is None:
-            raise MyError("Error: arg new_file are required in this mode ")
-    except MyError as err:
+            raise UserError("Error: arg new_file are required in this mode ")
+    except UserError as err:
         print(err.msg)
         sys.exit(1)
+
+def check_interval_arg(cl_arg: ClassVar):
+    """
+    Checks interval argument(--interval)
+    """
     try:
         if cl_arg.interval[0] not in [0, 1, 2, 3, 4]:
-            raise MyError("Error: incorrect interval time index")
-    except MyError as err:
+            raise UserError("Error: incorrect interval time index")
+    except UserError as err:
         print(err.msg)
         sys.exit(1)
+
+def check_period_argument(cl_arg: ClassVar):
+    """
+    Checks period command line argument(--period)
+    """
     fmt = "%Y-%m-%d %H:%M:%S.%f"
     try:
         p1 = cl_arg.period[0] + " " + cl_arg.period[1]
         p2 = cl_arg.period[2] + " " + cl_arg.period[3]
         if  (datetime.datetime.strptime(p1,fmt) >
              datetime.datetime.strptime(p2,fmt)):
-            raise MyError("Error: incorrect period")
-    except MyError as err:
+            raise UserError("Error: incorrect period")
+    except UserError as err:
         print(err.msg)
-        cl_arg.period = None
+        return True
     except TypeError:
         print("Empty period or incorrect period")
-        cl_arg.period = None
-    return cl_arg
+        return True
+    return False
 
 
 def manage_visualizer(cl_arg: ClassVar):
@@ -128,7 +175,7 @@ def manage_visualizer(cl_arg: ClassVar):
     print(cl_arg.mode)
 
     if cl_arg.mode == "create":
-        data_frame = pd.DataFrame(parse_file(cl_arg.file))
+        data_frame = parse_file(cl_arg.file)
         data_frame = data_frame.sort_values(by="date")
         if cl_arg.period is not None:
             data_for_plots = choise_date_in_period(cl_arg.period,
@@ -139,19 +186,9 @@ def manage_visualizer(cl_arg: ClassVar):
         record_in_dir(cl_arg.file, cl_arg.output, plots)
 
     else:
-        data_file = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
-        out_data = open(cl_arg.output + "_data.json", "w")
-        data2 = cl_arg.new_file.read()
-        data2 = data2[:-1] + ","
-        cl_arg.new_file.close()
-        out_data.write(data2)
-        data1 = cl_arg.file.read()
-        data1 = data1[1:]
-        cl_arg.file.close()
-        out_data.write(data1)
-        out_data.close()
-        out_data = open(cl_arg.output + "_data.json", "r")
-        data_frame = pd.DataFrame(parse_file(out_data))
+        data_file = create_union_data_file(cl_arg)
+        out_data = open(data_file, "r")
+        data_frame = parse_file(out_data)
         data_frame = data_frame.sort_values(by="date")
         if cl_arg.period is not None:
             data_for_plots = choise_date_in_period(cl_arg.period,
@@ -162,6 +199,20 @@ def manage_visualizer(cl_arg: ClassVar):
         record_in_dir(out_data, cl_arg.output, plots)
         data_file.unlink()
 
+def create_union_data_file(cl_arg: ClassVar) -> ClassVar:
+    """ Create .json file including union of other .json files"""
+    data_file = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
+    out_data = open(data_file, "w")
+    data2 = cl_arg.new_file.read()
+    data2 = data2[:-1] + ","
+    cl_arg.new_file.close()
+    out_data.write(data2)
+    data1 = cl_arg.file.read()
+    data1 = data1[1:]
+    cl_arg.file.close()
+    out_data.write(data1)
+    out_data.close()
+    return data_file
 
 def choise_date_in_period(period: List[str],
                           data_frame: ClassVar,
@@ -173,8 +224,8 @@ def choise_date_in_period(period: List[str],
     length = data_frame.shape[0]-1
     try:
         if p0 > data_frame.values[length, 0] or p1 < data_frame.values[0, 0]:
-           raise MyError("Error: this period doesn't contain any values")
-    except MyError as err:
+           raise UserError("Error: this period doesn't contain any values")
+    except UserError as err:
         print(err.msg)
         if data_file is not None:
             data_file.unlink()
@@ -246,5 +297,5 @@ def define_ticks(data_frame: ClassVar,
     return ticks_dict
 
 if __name__ == '__main__':
-    cl_arg = parser_cl_args()
+    cl_arg = parse_cl_args()
     manage_visualizer(cl_arg)
