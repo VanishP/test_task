@@ -4,11 +4,10 @@ Creates plots of value and average price
 
 """
 
-import sys
 from math import pi
 import json
 import shutil
-from typing import Dict, List, io, ClassVar, Tuple
+from typing import Dict, List, io, ClassVar
 
 import datetime
 
@@ -54,8 +53,6 @@ def create_data_dict(json_data: List[Dict]) -> ClassVar:
     return data_frame
 
 
-
-
 def manage_visualizer(cl_arg: ClassVar):
     """
     Creates files with plots and data in selected mode(create, append) and
@@ -71,31 +68,6 @@ def manage_visualizer(cl_arg: ClassVar):
         build_plot(out_data, cl_arg.period,
                    cl_arg.output, cl_arg.interval, data_file_path)
         data_file_path.unlink()
-
-def build_plot(data_file:io, period:List[str], output:str,
-               interval: List[int], data_file_path: ClassVar=None ):
-    """
-    Create plot
-    """
-    time_delta = [
-        datetime.timedelta(seconds=interval[1]),
-        datetime.timedelta(minutes=interval[1]),
-        datetime.timedelta(hours=interval[1]),
-        datetime.timedelta(days=interval[1]),
-        datetime.timedelta(weeks=interval[1])
-    ]
-
-    data_frame = parse_file(data_file)
-    data_frame = data_frame.sort_values(by="date")
-    if period is not None:
-        data_for_plots = choise_date_in_period(period,
-                                               data_frame,
-                                               data_file_path)
-    else:
-        data_for_plots = data_frame
-    plots = create_plots(data_for_plots, time_delta[interval[0]])
-    record_in_dir(data_file, output, plots)
-
 
 
 def create_union_data_file(cl_arg: ClassVar) -> ClassVar:
@@ -123,7 +95,6 @@ def choise_date_in_period(period: List[str],
     return data_frame
 
 
-
 def record_in_dir(data_file: io, output: str, plots: ClassVar):
     """ Records in dir plots and data"""
     directory = pathlib.Path.cwd()/(output + "_dir")
@@ -134,6 +105,29 @@ def record_in_dir(data_file: io, output: str, plots: ClassVar):
     data_file.close()
 
 
+def build_plot(data_file:io, period:List[str], output:str,
+               interval: List[int], data_file_path: ClassVar=None ):
+    """
+    Prepares data and create plots
+    """
+    time_delta = [
+        datetime.timedelta(seconds=interval[1]),
+        datetime.timedelta(minutes=interval[1]),
+        datetime.timedelta(hours=interval[1]),
+        datetime.timedelta(days=interval[1]),
+        datetime.timedelta(weeks=interval[1])
+    ]
+
+    data_frame = parse_file(data_file)
+    data_frame = data_frame.sort_values(by="date")
+    if period is not None:
+        data_for_plots = choise_date_in_period(period,
+                                               data_frame,
+                                               data_file_path)
+    else:
+        data_for_plots = data_frame
+    plots = create_plots(data_for_plots, time_delta[interval[0]])
+    record_in_dir(data_file, output, plots)
 
 def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     """ Create plots of volume and average price """
@@ -167,8 +161,6 @@ def sum_volume(volume: ClassVar) -> ClassVar:
     for i in range(volume.size)[1:]:
         volume[i] += volume[i - 1]
     return volume
-
-
 
 def define_ticks(data_frame: ClassVar,
                  time_delta: ClassVar) -> Dict[int, str]:
