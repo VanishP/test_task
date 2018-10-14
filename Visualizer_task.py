@@ -61,44 +61,47 @@ def manage_visualizer(cl_arg: ClassVar):
     Creates files with plots and data in selected mode(create, append) and
     records data and plots in dir.
     """
-    time_delta = [
-             datetime.timedelta(seconds=cl_arg.interval[1]),
-             datetime.timedelta(minutes=cl_arg.interval[1]),
-             datetime.timedelta(hours=cl_arg.interval[1]),
-             datetime.timedelta(days=cl_arg.interval[1]),
-             datetime.timedelta(weeks=cl_arg.interval[1])
-             ]
-    print(cl_arg.mode)
 
     if cl_arg.mode == "create":
-        data_frame = parse_file(cl_arg.file)
-        data_frame = data_frame.sort_values(by="date")
-        if cl_arg.period is not None:
-            data_for_plots = choise_date_in_period(cl_arg.period,
-                                                   data_frame)
-        else:
-            data_for_plots = data_frame
-        plots = create_plots(data_for_plots, time_delta[cl_arg.interval[0]])
-        record_in_dir(cl_arg.file, cl_arg.output, plots)
-
+        build_plot(cl_arg.file, cl_arg.period, cl_arg.output,
+                   cl_arg.interval)
     else:
-        data_file = create_union_data_file(cl_arg)
-        out_data = open(data_file, "r")
-        data_frame = parse_file(out_data)
-        data_frame = data_frame.sort_values(by="date")
-        if cl_arg.period is not None:
-            data_for_plots = choise_date_in_period(cl_arg.period,
-                                                   data_frame, data_file)
-        else:
-            data_for_plots = data_frame
-        plots = create_plots(data_for_plots, time_delta[cl_arg.interval[0]])
-        record_in_dir(out_data, cl_arg.output, plots)
-        data_file.unlink()
+        data_file_path = create_union_data_file(cl_arg)
+        out_data = open(data_file_path, "r")
+        build_plot(out_data, cl_arg.period,
+                   cl_arg.output, cl_arg.interval, data_file_path)
+        data_file_path.unlink()
+
+def build_plot(data_file:io, period:List[str], output:str,
+               interval: List[int], data_file_path: ClassVar=None ):
+    """
+    Create plot
+    """
+    time_delta = [
+        datetime.timedelta(seconds=interval[1]),
+        datetime.timedelta(minutes=interval[1]),
+        datetime.timedelta(hours=interval[1]),
+        datetime.timedelta(days=interval[1]),
+        datetime.timedelta(weeks=interval[1])
+    ]
+
+    data_frame = parse_file(data_file)
+    data_frame = data_frame.sort_values(by="date")
+    if period is not None:
+        data_for_plots = choise_date_in_period(period,
+                                               data_frame,
+                                               data_file_path)
+    else:
+        data_for_plots = data_frame
+    plots = create_plots(data_for_plots, time_delta[interval[0]])
+    record_in_dir(data_file, output, plots)
+
+
 
 def create_union_data_file(cl_arg: ClassVar) -> ClassVar:
     """ Create .json file including union of other .json files"""
-    data_file = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
-    out_data = open(data_file, "w")
+    data_file_path = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
+    out_data = open(data_file_path, "w")
     data2 = cl_arg.new_file.read()
     data2 = data2[:-1] + ","
     cl_arg.new_file.close()
@@ -108,11 +111,11 @@ def create_union_data_file(cl_arg: ClassVar) -> ClassVar:
     cl_arg.file.close()
     out_data.write(data1)
     out_data.close()
-    return data_file
+    return data_file_path
 
 def choise_date_in_period(period: List[str],
                           data_frame: ClassVar,
-                          data_file: ClassVar=None) -> ClassVar:
+                          data_file: ClassVar) -> ClassVar:
     """ Filter data by period"""
     fmt = "%Y-%m-%d %H:%M:%S.%f"
     p0 = datetime.datetime.strptime(period[0] + " " + period[1],fmt)

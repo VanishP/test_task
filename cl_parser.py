@@ -1,11 +1,19 @@
+"""
+
+Module with command line parser function and UserError class
+
+"""
+
 import argparse
 from typing import  ClassVar
 import sys
 import datetime
 
+
 class UserError(Exception):
     def __init__(self,error_text:str="error"):
         self.msg = error_text
+
 
 def parse_cl_args() -> ClassVar:
     """
