@@ -8,7 +8,7 @@ import sys
 from math import pi
 import json
 import shutil
-from typing import Dict, List, io, ClassVar
+from typing import Dict, List, io, ClassVar, Tuple
 
 import datetime
 
@@ -21,7 +21,7 @@ from bokeh.plotting import figure
 import pandas as pd
 import numpy as np
 
-from cl_parser import UserError, parse_cl_args
+from cl_parser import  parse_cl_args, check_period_correct
 
 
 
@@ -117,21 +117,12 @@ def choise_date_in_period(period: List[str],
                           data_frame: ClassVar,
                           data_file: ClassVar) -> ClassVar:
     """ Filter data by period"""
-    fmt = "%Y-%m-%d %H:%M:%S.%f"
-    p0 = datetime.datetime.strptime(period[0] + " " + period[1],fmt)
-    p1 = datetime.datetime.strptime(period[2] + " " + period[3],fmt)
-    length = data_frame.shape[0]-1
-    try:
-        if p0 > data_frame.values[length, 0] or p1 < data_frame.values[0, 0]:
-           raise UserError("Error: this period doesn't contain any values")
-    except UserError as err:
-        print(err.msg)
-        if data_file is not None:
-            data_file.unlink()
-        sys.exit(1)
+    p0, p1 = check_period_correct(period, data_frame, data_file)
     data_frame = data_frame.loc[data_frame["date"] >= p0]
     data_frame = data_frame.loc[data_frame["date"] <= p1]
     return data_frame
+
+
 
 def record_in_dir(data_file: io, output: str, plots: ClassVar):
     """ Records in dir plots and data"""

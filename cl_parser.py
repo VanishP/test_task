@@ -5,7 +5,7 @@ Module with command line parser function and UserError class
 """
 
 import argparse
-from typing import  ClassVar
+from typing import  ClassVar, List, Tuple
 import sys
 import datetime
 
@@ -65,7 +65,7 @@ def check_cl_args(cl_arg:ClassVar) -> bool:
         return check_period_argument(cl_arg)
     return True
 
-def check_excess_create_arg(cl_arg:ClassVar):
+def check_excess_create_arg(cl_arg: ClassVar):
     """
     Checks existence excess command line argument(--new_file)
     """
@@ -76,7 +76,7 @@ def check_excess_create_arg(cl_arg:ClassVar):
         print(err.msg)
         sys.exit(1)
 
-def check_append_arg(cl_arg:ClassVar):
+def check_append_arg(cl_arg: ClassVar):
     """
     Checks existence append command line argument(--new_file)
     """
@@ -116,3 +116,22 @@ def check_period_argument(cl_arg: ClassVar):
         print("Empty period or incorrect period")
         return True
     return False
+
+def check_period_correct(period: List[str], data_frame: ClassVar,
+                         data_file: ClassVar) -> Tuple:
+    """
+    Check contain period date with data or not
+    """
+    fmt = "%Y-%m-%d %H:%M:%S.%f"
+    p0 = datetime.datetime.strptime(period[0] + " " + period[1], fmt)
+    p1 = datetime.datetime.strptime(period[2] + " " + period[3], fmt)
+    length = data_frame.shape[0] - 1
+    try:
+        if p0 > data_frame.values[length, 0] or p1 < data_frame.values[0, 0]:
+           raise UserError("Error: this period doesn't contain any values")
+    except UserError as err:
+        print(err.msg)
+        if data_file is not None:
+            data_file.unlink()
+        sys.exit(1)
+    return p0, p1
