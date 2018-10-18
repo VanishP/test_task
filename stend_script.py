@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     print("\n\n**********")
     print("And, finally, call script in append mode with no period argument:")
-    print(" ".join([process, mode[1], file1, file2, intervals[3][11],
+    print(" ".join([process, mode[1], file1, file2, intervals[3],
                     output + "append" + intervals[3][11]]))
     subprocess.call(" ".join([process, mode[1], file1, file2, intervals[3],
 	                        output + "append" + intervals[3][11]]), shell=True)

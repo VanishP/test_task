@@ -39,17 +39,17 @@ def create_data_dict(json_data: List[Dict]) -> ClassVar:
     """
     Creates dictionary with data lists: timestamps, date, volume and price
     """
+    #[datetime.datetime.fromtimestamp(float(obj["ts"]))
     json_data = np.array(list(map(lambda obj:
-                    [[datetime.datetime.fromtimestamp(float(obj["ts"])),
-                      float(obj["ts"]),
+                    [[float(obj["ts"]),
                       float(obj["volume"]),
                       float(obj["price"])]],json_data))).T
-    data_frame = pd.DataFrame(dict(zip(["date", "time_stamp", "volume",
+    #zip(["date"... json_data[3].tolist()[0]
+    data_frame = pd.DataFrame(dict(zip(["time_stamp", "volume",
                                         "average_price"],
                                         [json_data[0].tolist()[0],
                                          json_data[1].tolist()[0],
-                                         json_data[2].tolist()[0],
-                                         json_data[3].tolist()[0]])))
+                                         json_data[2].tolist()[0]])))
     return data_frame
 
 
@@ -90,8 +90,9 @@ def choise_date_in_period(period: List[str],
                           data_file: ClassVar) -> ClassVar:
     """ Filter data by period"""
     p0, p1 = check_period_correct(period, data_frame, data_file)
-    data_frame = data_frame.loc[data_frame["date"] >= p0]
-    data_frame = data_frame.loc[data_frame["date"] <= p1]
+    #[date]
+    data_frame = data_frame.loc[data_frame["time_stamp"] >= p0.timestamp()]
+    data_frame = data_frame.loc[data_frame["time_stamp"] <= p1.timestamp()]
     return data_frame
 
 
@@ -119,7 +120,7 @@ def build_plot(data_file:io, period:List[str], output:str,
     ]
 
     data_frame = parse_file(data_file)
-    data_frame = data_frame.sort_values(by="date")
+    data_frame = data_frame.sort_values(by="time_stamp")
     if period is not None:
         data_for_plots = choise_date_in_period(period,
                                                data_frame,
@@ -165,14 +166,17 @@ def sum_volume(volume: ClassVar) -> ClassVar:
 def define_ticks(data_frame: ClassVar,
                  time_delta: ClassVar) -> Dict[int, str]:
     """ Define ticks on xaxis according with interval argument"""
-    first_date = data_frame.values[0, 0]
-    last_date = data_frame.values[data_frame.shape[0] - 1, 0]
+    first_date = datetime.datetime.fromtimestamp(
+                 data_frame.values[0, 0])
+    last_date = datetime.datetime.fromtimestamp(
+                data_frame.values[data_frame.shape[0] - 1, 0])
     date_tick = first_date
+    print("first date = ",type(first_date))
+    print("time delta = ", type(time_delta))
     ticks_date = [first_date - time_delta, first_date]
     while date_tick <= last_date:
         date_tick += time_delta
         ticks_date.append(date_tick)
-
     ticks = list(map(lambda x: x.timestamp(), ticks_date))
     ticks_date = list(map(lambda x: x.strftime("%d %b %Y %T"), ticks_date))
     ticks_dict = dict(zip(ticks, ticks_date))

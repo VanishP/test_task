@@ -127,7 +127,9 @@ def check_period_correct(period: List[str], data_frame: ClassVar,
     p1 = datetime.datetime.strptime(period[2] + " " + period[3], fmt)
     length = data_frame.shape[0] - 1
     try:
-        if p0 > data_frame.values[length, 0] or p1 < data_frame.values[0, 0]:
+        #p0 >... or p1< ...
+        if p0.timestamp() > data_frame.values[length, 0]\
+                or p1.timestamp() < data_frame.values[0, 0]:
            raise UserError("Error: this period doesn't contain any values")
     except UserError as err:
         print(err.msg)
