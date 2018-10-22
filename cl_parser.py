@@ -58,14 +58,28 @@ def check_cl_args(cl_arg:ClassVar) -> bool:
     """
     Checks command line arguments
     """
-    check_excess_create_arg(cl_arg)
-    check_excess_create_arg(cl_arg)
+    check_mode_arg(cl_arg)
+    if cl_arg.mode == "create":
+         check_create_arg(cl_arg)
+    if cl_arg.mode == "append":
+        check_append_arg(cl_arg)
     check_interval_arg(cl_arg)
-    if cl_arg is not None:
+    if cl_arg.period is not None:
         return check_period_argument(cl_arg)
     return True
 
-def check_excess_create_arg(cl_arg: ClassVar):
+def check_mode_arg(cl_arg:ClassVar):
+    """
+    Checks mode arguments
+    """
+    try:
+        if cl_arg.mode not in ["create", "append"]:
+            raise UserError("Error: arg mode is incorrect ")
+    except UserError as err:
+        print(err.msg)
+        sys.exit(1)
+
+def check_create_arg(cl_arg:ClassVar):
     """
     Checks existence excess command line argument(--new_file)
     """
@@ -127,7 +141,6 @@ def check_period_correct(period: List[str], data_frame: ClassVar,
     p1 = datetime.datetime.strptime(period[2] + " " + period[3], fmt)
     length = data_frame.shape[0] - 1
     try:
-        #p0 >... or p1< ...
         if p0.timestamp() > data_frame.values[length, 0]\
                 or p1.timestamp() < data_frame.values[0, 0]:
            raise UserError("Error: this period doesn't contain any values")

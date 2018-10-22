@@ -39,12 +39,10 @@ def create_data_dict(json_data: List[Dict]) -> ClassVar:
     """
     Creates dictionary with data lists: timestamps, date, volume and price
     """
-    #[datetime.datetime.fromtimestamp(float(obj["ts"]))
     json_data = np.array(list(map(lambda obj:
                     [[float(obj["ts"]),
                       float(obj["volume"]),
                       float(obj["price"])]],json_data))).T
-    #zip(["date"... json_data[3].tolist()[0]
     data_frame = pd.DataFrame(dict(zip(["time_stamp", "volume",
                                         "average_price"],
                                         [json_data[0].tolist()[0],
@@ -62,15 +60,15 @@ def manage_visualizer(cl_arg: ClassVar):
     if cl_arg.mode == "create":
         build_plot(cl_arg.file, cl_arg.period, cl_arg.output,
                    cl_arg.interval)
-    else:
-        data_file_path = create_union_data_file(cl_arg)
+    elif cl_arg.mode == "append":
+        data_file_path = unite_data_files(cl_arg)
         out_data = open(data_file_path, "r")
         build_plot(out_data, cl_arg.period,
                    cl_arg.output, cl_arg.interval, data_file_path)
         data_file_path.unlink()
 
 
-def create_union_data_file(cl_arg: ClassVar) -> ClassVar:
+def unite_data_files(cl_arg: ClassVar) -> ClassVar:
     """ Create .json file including union of other .json files"""
     data_file_path = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
     out_data = open(data_file_path, "w")
@@ -90,18 +88,17 @@ def choise_date_in_period(period: List[str],
                           data_file: ClassVar) -> ClassVar:
     """ Filter data by period"""
     p0, p1 = check_period_correct(period, data_frame, data_file)
-    #[date]
     data_frame = data_frame.loc[data_frame["time_stamp"] >= p0.timestamp()]
     data_frame = data_frame.loc[data_frame["time_stamp"] <= p1.timestamp()]
     return data_frame
 
 
-def record_in_dir(data_file: io, output: str, plots: ClassVar):
+def record_in_dir(data_file: io, output: str):
     """ Records in dir plots and data"""
     directory = pathlib.Path.cwd()/(output + "_dir")
     directory.mkdir(parents=True)
     output_file(directory/(output + ".html"))
-    show(plots)
+
     shutil.copyfile(data_file.name, directory/(output + "_data.json"))
     data_file.close()
 
@@ -128,7 +125,8 @@ def build_plot(data_file:io, period:List[str], output:str,
     else:
         data_for_plots = data_frame
     plots = create_plots(data_for_plots, time_delta[interval[0]])
-    record_in_dir(data_file, output, plots)
+    record_in_dir(data_file, output)
+    show(plots)
 
 def create_plots(data_frame: ClassVar, time_delta: ClassVar) -> ClassVar:
     """ Create plots of volume and average price """
