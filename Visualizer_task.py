@@ -62,25 +62,22 @@ def manage_visualizer(cl_arg: ClassVar):
                    cl_arg.interval)
     elif cl_arg.mode == "append":
         data_file_path = unite_data_files(cl_arg)
-        out_data = open(data_file_path, "r")
-        build_plot(out_data, cl_arg.period,
+        data_union = open(data_file_path, "r")
+        build_plot(data_union, cl_arg.period,
                    cl_arg.output, cl_arg.interval, data_file_path)
         data_file_path.unlink()
 
 
 def unite_data_files(cl_arg: ClassVar) -> ClassVar:
-    """ Create .json file including union of other .json files"""
+    """ Create .json file including union with other .json files"""
     data_file_path = pathlib.Path.cwd() / (cl_arg.output + "_data.json")
-    out_data = open(data_file_path, "w")
-    data2 = cl_arg.new_file.read()
-    data2 = data2[:-1] + ","
+    data, append_data = cl_arg.new_file.read(), cl_arg.file.read()
+    data = data[:-1] + ", " + append_data[1:]
     cl_arg.new_file.close()
-    out_data.write(data2)
-    data1 = cl_arg.file.read()
-    data1 = data1[1:]
     cl_arg.file.close()
-    out_data.write(data1)
-    out_data.close()
+    fout = open(data_file_path, "w")
+    fout.write(data)
+    fout.close()
     return data_file_path
 
 def choise_date_in_period(period: List[str],
@@ -169,8 +166,6 @@ def define_ticks(data_frame: ClassVar,
     last_date = datetime.datetime.fromtimestamp(
                 data_frame.values[data_frame.shape[0] - 1, 0])
     date_tick = first_date
-    print("first date = ",type(first_date))
-    print("time delta = ", type(time_delta))
     ticks_date = [first_date - time_delta, first_date]
     while date_tick <= last_date:
         date_tick += time_delta
