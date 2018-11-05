@@ -1,6 +1,8 @@
 """
+
 Stand script for demonstrate Visualizer_task.py work in
-different mode with different arguments    	
+different mode with different arguments
+
 """
 
 
